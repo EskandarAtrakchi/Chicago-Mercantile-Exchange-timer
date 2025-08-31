@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CME Bitcoin Futures — Countdown (Dublin)</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(135deg,#0f172a,#001219);color:#e6eef8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+    .card{background:rgba(255,255,255,0.03);padding:28px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.6);width:420px;text-align:center}
+    h1{margin:0 0 8px;font-size:20px}
+    p.subtitle{margin:0 0 18px;color:#9fb0d9}
+    .big{font-size:40px;font-weight:700;letter-spacing:1px}
+    .label{margin-top:10px;color:#bcd0f5}
+    .meta{margin-top:12px;color:#89a3d9;font-size:13px}
+    .small{font-size:13px;color:#9fb0d9}
+    .row{display:flex;gap:8px;justify-content:center;margin-top:14px}
+    button{background:#1f6feb;border:0;padding:8px 12px;border-radius:8px;color:white;cursor:pointer}
+    footer{margin-top:14px;font-size:12px;color:#7f9bd6}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>CME Bitcoin Futures — Next Transition</h1>
+    <p class="subtitle">All times shown in <strong>Europe/Dublin</strong></p>
+
+    <div id="event" class="small">Calculating...</div>
+    <div id="countdown" class="big">--:--:--</div>
+    <div id="targetLocal" class="label"></div>
+
+    <div class="row">
+      <button id="refresh">Refresh</button>
+      <button id="copy">Copy Dublin Time</button>
+    </div>
+
+    <div class="meta">CME schedule used:
+      <ul style="text-align:left;margin:8px 0 0;padding-left:18px;line-height:1.4">
+        <li>Open: Sunday 18:00 ET</li>
+        <li>Close: Friday 17:00 ET</li>
+        <li>Daily break: 17:00–18:00 ET (daily)</li>
+      </ul>
+    </div>
+    <footer>Uses IANA time zones — not reliant on your OS timezone setting.</footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+  <script>
+    const { DateTime, Interval } = luxon;
+    const NY = 'America/New_York';
+    const DUB = 'Europe/Dublin';
+
+    // CME rules (times are in New York time zone)
+    // Open: Sunday 18:00 (18:00:00)
+    // Close: Friday 17:00
+    // Daily break: 17:00 - 18:00 each day
+
+    function getNextTransition(nowNy){
+      // nowNy is a DateTime in NY tz
+      const weekday = nowNy.weekday; // 1 = Monday ... 7 = Sunday
+      const time = nowNy;
+
+      // helper to create DateTime in same week or adjust
+      function dtFor(dayOfWeek, hour, minute=0){
+        // find the date for the given weekday in the current (or next) week such that it's >= now when needed
+        // start from this week's Monday through Sunday mapping using DateTime.set({weekday:...})
+        let candidate = nowNy.set({weekday: dayOfWeek, hour, minute, second:0, millisecond:0});
+        // If candidate is before now, and it's supposed to be "next" occurrence, shift forward by 7 days
+        if(candidate <= nowNy) candidate = candidate.plus({days:7});
+        return candidate;
+      }
+
+      // Compute today's key times
+      const dailyClose = nowNy.set({hour:17,minute:0,second:0,millisecond:0});
+      const dailyReopen = nowNy.set({hour:18,minute:0,second:0,millisecond:0});
+
+      // Friday close
+      let fridayClose = nowNy.set({weekday:5,hour:17,minute:0,second:0,millisecond:0});
+      if(fridayClose <= nowNy) fridayClose = fridayClose.plus({days:7});
+
+      // Sunday open
+      let sundayOpen = nowNy.set({weekday:7,hour:18,minute:0,second:0,millisecond:0});
+      if(sundayOpen <= nowNy) sundayOpen = sundayOpen.plus({days:7});
+
+      // Determine state
+      // If now is between Sun 18:00 and Fri 17:00 excluding daily break -> OPEN
+      // If now is between daily break 17:00-18:00 (any day) and the day is Mon-Fri-> BREAK
+      // If now is Fri 17:00 -> closed until Sun 18:00
+
+      // Check weekend closed: from Fri 17:00 NY until Sun 18:00 NY
+      const lastFridayClose = fridayClose.minus({days:7});
+      const nextSundayOpen = sundayOpen; // computed
+
+      if(nowNy >= lastFridayClose && nowNy < nextSundayOpen){
+        // Market is CLOSED (weekend)
+        return {
+          state: 'CLOSED (weekend)',
+          targetNy: nextSundayOpen
+        };
+      }
+
+      // Check daily break today
+      const today17 = nowNy.set({hour:17,minute:0,second:0,millisecond:0});
+      const today18 = nowNy.set({hour:18,minute:0,second:0,millisecond:0});
+      if(nowNy >= today17 && nowNy < today18){
+        return { state: 'DAILY BREAK', targetNy: today18 };
+      }
+
+      // Otherwise, market is OPEN. Next transition is either today's 17:00 (if before it) or next day's 17:00
+      if(nowNy < today17){
+        return { state: 'OPEN', targetNy: today17 };
+      } else {
+        // now >= today18 or before next day's 17
+        let next17 = today17.plus({days:1});
+        // However, if next17 is the Friday 17:00 that passes into weekend, that's fine — the logic above will close after that
+        return { state: 'OPEN', targetNy: next17 };
+      }
+    }
+
+    function update(){
+      const nowNy = DateTime.now().setZone(NY);
+      const nowDub = nowNy.setZone(DUB);
+      const { state, targetNy } = getNextTransition(nowNy);
+
+      const targetDub = targetNy.setZone(DUB);
+
+      const diff = targetDub.diff(nowDub, ['days','hours','minutes','seconds']).toObject();
+
+      const days = Math.floor(diff.days||0);
+      const hours = Math.floor(diff.hours||0);
+      const minutes = Math.floor(diff.minutes||0);
+      const seconds = Math.floor(diff.seconds||0);
+
+      const parts = [];
+      if(days>0) parts.push(String(days).padStart(2,'0') + 'd');
+      parts.push(String(hours).padStart(2,'0'));
+      parts.push(String(minutes).padStart(2,'0'));
+      parts.push(String(seconds).padStart(2,'0'));
+
+      document.getElementById('event').innerHTML = `Market status: <strong>${state}</strong>`;
+      document.getElementById('countdown').textContent = (days>0? (String(days)+ 'd '):'') + `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+      document.getElementById('targetLocal').textContent = `Target time (Dublin): ${targetDub.toLocaleString(DateTime.DATETIME_FULL)} (${DUB})`;
+
+      // change style slightly when closed/open
+      document.querySelector('.card').style.border = state.includes('CLOSED') ? '1px solid rgba(255,80,80,0.12)' : '1px solid rgba(80,200,120,0.06)';
+    }
+
+    document.getElementById('refresh').addEventListener('click', update);
+    document.getElementById('copy').addEventListener('click', ()=>{
+      const txt = document.getElementById('targetLocal').textContent;
+      navigator.clipboard?.writeText(txt).then(()=>{
+        alert('Dublin target time copied to clipboard');
+      }).catch(()=>{
+        prompt('Copy this time', txt);
+      });
+    });
+
+    // Start
+    update();
+    setInterval(update, 1000);
+  </script>
+</body>
+</html>
