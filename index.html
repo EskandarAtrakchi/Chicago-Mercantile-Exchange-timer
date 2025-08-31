@@ -51,6 +51,22 @@
       h1{font-size:18px}
       .card{padding:20px}
     }
+
+    /* Floating timer styles */
+    #floatingTimer {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.9);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      font-size: 18px;
+      font-weight: 600;
+      cursor: move;
+      z-index: 9999;
+    }
   </style>
 </head>
 <body>
@@ -77,6 +93,9 @@
     </div>
     <footer>Uses IANA time zones — not reliant on your OS timezone setting.</footer>
   </div>
+
+  <!-- Floating Timer -->
+  <div id="floatingTimer">⏳ --:--:--</div>
 
   <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
   <script>
@@ -126,9 +145,15 @@
       const minutes = Math.floor(diff.minutes||0);
       const seconds = Math.floor(diff.seconds||0);
 
+      const countdownText = (days>0? (days+'d '):'') + 
+        `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+
       document.getElementById('event').innerHTML = `Market status: <strong>${state}</strong>`;
-      document.getElementById('countdown').textContent = (days>0? (days+'d '):'') + `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+      document.getElementById('countdown').textContent = countdownText;
       document.getElementById('targetLocal').textContent = `Target time (Dublin): ${targetDub.toLocaleString(DateTime.DATETIME_FULL)} (${DUB})`;
+
+      // update floating timer too
+      document.getElementById('floatingTimer').textContent = "⏳ " + countdownText;
 
       document.querySelector('.card').style.border = state.includes('CLOSED') ? '1px solid rgba(255,80,80,0.2)' : '1px solid rgba(80,200,120,0.2)';
     }
@@ -145,6 +170,26 @@
 
     update();
     setInterval(update, 1000);
+
+    // make floating timer draggable
+    const float = document.getElementById("floatingTimer");
+    let offsetX, offsetY, dragging = false;
+
+    float.addEventListener("mousedown", e => {
+      dragging = true;
+      offsetX = e.clientX - float.offsetLeft;
+      offsetY = e.clientY - float.offsetTop;
+    });
+
+    document.addEventListener("mousemove", e => {
+      if (!dragging) return;
+      float.style.left = (e.clientX - offsetX) + "px";
+      float.style.top = (e.clientY - offsetY) + "px";
+      float.style.right = "auto";
+      float.style.bottom = "auto";
+    });
+
+    document.addEventListener("mouseup", () => dragging = false);
   </script>
 </body>
 </html>
