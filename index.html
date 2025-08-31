@@ -6,17 +6,51 @@
   <title>CME Bitcoin Futures — Countdown (Dublin)</title>
   <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrC83h3hTxI-eUXaT0e7Tn0jeK-PJUKX4HEhlLvYNC3ZEq3oiSKRCdY0RN8ta3GjfIY-k&usqp=CAU" type="image/png">
   <style>
-    body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(135deg,#0f172a,#001219);color:#e6eef8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-    .card{background:rgba(255,255,255,0.03);padding:28px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.6);width:420px;text-align:center}
-    h1{margin:0 0 8px;font-size:20px}
-    p.subtitle{margin:0 0 18px;color:#9fb0d9}
-    .big{font-size:40px;font-weight:700;letter-spacing:1px}
-    .label{margin-top:10px;color:#bcd0f5}
-    .meta{margin-top:12px;color:#89a3d9;font-size:13px}
-    .small{font-size:13px;color:#9fb0d9}
-    .row{display:flex;gap:8px;justify-content:center;margin-top:14px}
-    button{background:#1f6feb;border:0;padding:8px 12px;border-radius:8px;color:white;cursor:pointer}
-    footer{margin-top:14px;font-size:12px;color:#7f9bd6}
+    body{
+      font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;
+      background:linear-gradient(135deg,#0f172a,#001219);
+      color:#e6eef8;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      margin:0;
+      padding:20px;
+    }
+    .card{
+      background:rgba(255,255,255,0.05);
+      padding:28px;
+      border-radius:16px;
+      box-shadow:0 10px 30px rgba(2,6,23,0.6);
+      max-width:480px;
+      width:100%;
+      text-align:center;
+    }
+    h1{margin:0 0 8px;font-size:22px;line-height:1.3}
+    p.subtitle{margin:0 0 18px;color:#9fb0d9;font-size:14px}
+    .big{font-size:42px;font-weight:700;letter-spacing:1px}
+    .label{margin-top:10px;color:#bcd0f5;font-size:14px;word-break:break-word}
+    .meta{margin-top:16px;color:#89a3d9;font-size:13px;text-align:left}
+    .small{font-size:14px;color:#9fb0d9}
+    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+    button{
+      background:#1f6feb;
+      border:0;
+      padding:10px 14px;
+      border-radius:10px;
+      color:white;
+      cursor:pointer;
+      transition:background .2s;
+      font-size:14px;
+    }
+    button:hover{background:#1552b5}
+    footer{margin-top:16px;font-size:12px;color:#7f9bd6;text-align:center}
+
+    @media(max-width:480px){
+      .big{font-size:32px}
+      h1{font-size:18px}
+      .card{padding:20px}
+    }
   </style>
 </head>
 <body>
@@ -33,8 +67,9 @@
       <button id="copy">Copy Dublin Time</button>
     </div>
 
-    <div class="meta">CME schedule used:
-      <ul style="text-align:left;margin:8px 0 0;padding-left:18px;line-height:1.4">
+    <div class="meta">
+      <strong>CME schedule used:</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;line-height:1.4">
         <li>Open: Sunday 18:00 ET</li>
         <li>Close: Friday 17:00 ET</li>
         <li>Daily break: 17:00–18:00 ET (daily)</li>
@@ -45,73 +80,35 @@
 
   <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
   <script>
-    const { DateTime, Interval } = luxon;
+    const { DateTime } = luxon;
     const NY = 'America/New_York';
     const DUB = 'Europe/Dublin';
 
-    // CME rules (times are in New York time zone)
-    // Open: Sunday 18:00 (18:00:00)
-    // Close: Friday 17:00
-    // Daily break: 17:00 - 18:00 each day
-
     function getNextTransition(nowNy){
-      // nowNy is a DateTime in NY tz
-      const weekday = nowNy.weekday; // 1 = Monday ... 7 = Sunday
-      const time = nowNy;
-
-      // helper to create DateTime in same week or adjust
-      function dtFor(dayOfWeek, hour, minute=0){
-        // find the date for the given weekday in the current (or next) week such that it's >= now when needed
-        // start from this week's Monday through Sunday mapping using DateTime.set({weekday:...})
-        let candidate = nowNy.set({weekday: dayOfWeek, hour, minute, second:0, millisecond:0});
-        // If candidate is before now, and it's supposed to be "next" occurrence, shift forward by 7 days
-        if(candidate <= nowNy) candidate = candidate.plus({days:7});
-        return candidate;
-      }
-
-      // Compute today's key times
       const dailyClose = nowNy.set({hour:17,minute:0,second:0,millisecond:0});
-      const dailyReopen = nowNy.set({hour:18,minute:0,second:0,millisecond:0});
+      const today18 = nowNy.set({hour:18,minute:0,second:0,millisecond:0});
 
-      // Friday close
       let fridayClose = nowNy.set({weekday:5,hour:17,minute:0,second:0,millisecond:0});
       if(fridayClose <= nowNy) fridayClose = fridayClose.plus({days:7});
 
-      // Sunday open
       let sundayOpen = nowNy.set({weekday:7,hour:18,minute:0,second:0,millisecond:0});
       if(sundayOpen <= nowNy) sundayOpen = sundayOpen.plus({days:7});
 
-      // Determine state
-      // If now is between Sun 18:00 and Fri 17:00 excluding daily break -> OPEN
-      // If now is between daily break 17:00-18:00 (any day) and the day is Mon-Fri-> BREAK
-      // If now is Fri 17:00 -> closed until Sun 18:00
-
-      // Check weekend closed: from Fri 17:00 NY until Sun 18:00 NY
       const lastFridayClose = fridayClose.minus({days:7});
-      const nextSundayOpen = sundayOpen; // computed
+      const nextSundayOpen = sundayOpen;
 
       if(nowNy >= lastFridayClose && nowNy < nextSundayOpen){
-        // Market is CLOSED (weekend)
-        return {
-          state: 'CLOSED (weekend)',
-          targetNy: nextSundayOpen
-        };
+        return { state: 'CLOSED (weekend)', targetNy: nextSundayOpen };
       }
 
-      // Check daily break today
-      const today17 = nowNy.set({hour:17,minute:0,second:0,millisecond:0});
-      const today18 = nowNy.set({hour:18,minute:0,second:0,millisecond:0});
-      if(nowNy >= today17 && nowNy < today18){
+      if(nowNy >= dailyClose && nowNy < today18){
         return { state: 'DAILY BREAK', targetNy: today18 };
       }
 
-      // Otherwise, market is OPEN. Next transition is either today's 17:00 (if before it) or next day's 17:00
-      if(nowNy < today17){
-        return { state: 'OPEN', targetNy: today17 };
+      if(nowNy < dailyClose){
+        return { state: 'OPEN', targetNy: dailyClose };
       } else {
-        // now >= today18 or before next day's 17
-        let next17 = today17.plus({days:1});
-        // However, if next17 is the Friday 17:00 that passes into weekend, that's fine — the logic above will close after that
+        let next17 = dailyClose.plus({days:1});
         return { state: 'OPEN', targetNy: next17 };
       }
     }
@@ -120,7 +117,6 @@
       const nowNy = DateTime.now().setZone(NY);
       const nowDub = nowNy.setZone(DUB);
       const { state, targetNy } = getNextTransition(nowNy);
-
       const targetDub = targetNy.setZone(DUB);
 
       const diff = targetDub.diff(nowDub, ['days','hours','minutes','seconds']).toObject();
@@ -130,18 +126,11 @@
       const minutes = Math.floor(diff.minutes||0);
       const seconds = Math.floor(diff.seconds||0);
 
-      const parts = [];
-      if(days>0) parts.push(String(days).padStart(2,'0') + 'd');
-      parts.push(String(hours).padStart(2,'0'));
-      parts.push(String(minutes).padStart(2,'0'));
-      parts.push(String(seconds).padStart(2,'0'));
-
       document.getElementById('event').innerHTML = `Market status: <strong>${state}</strong>`;
-      document.getElementById('countdown').textContent = (days>0? (String(days)+ 'd '):'') + `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+      document.getElementById('countdown').textContent = (days>0? (days+'d '):'') + `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
       document.getElementById('targetLocal').textContent = `Target time (Dublin): ${targetDub.toLocaleString(DateTime.DATETIME_FULL)} (${DUB})`;
 
-      // change style slightly when closed/open
-      document.querySelector('.card').style.border = state.includes('CLOSED') ? '1px solid rgba(255,80,80,0.12)' : '1px solid rgba(80,200,120,0.06)';
+      document.querySelector('.card').style.border = state.includes('CLOSED') ? '1px solid rgba(255,80,80,0.2)' : '1px solid rgba(80,200,120,0.2)';
     }
 
     document.getElementById('refresh').addEventListener('click', update);
@@ -154,7 +143,6 @@
       });
     });
 
-    // Start
     update();
     setInterval(update, 1000);
   </script>
