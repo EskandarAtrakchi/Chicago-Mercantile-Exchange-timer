@@ -2,194 +2,508 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CME Bitcoin Futures — Countdown (Dublin)</title>
-  <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrC83h3hTxI-eUXaT0e7Tn0jeK-PJUKX4HEhlLvYNC3ZEq3oiSKRCdY0RN8ta3GjfIY-k&usqp=CAU" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CME Bitcoin Futures — Countdown</title>
+  <meta name="description" content="Next CME Bitcoin Futures transition with Dublin/NY time, progress ring, notifications, and floating mini timer." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <style>
-    body{
-      font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;
-      background:linear-gradient(135deg,#0f172a,#001219);
-      color:#e6eef8;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-      margin:0;
-      padding:20px;
+    :root {
+      --bg-1: #0f172a; /* slate-900 */
+      --bg-2: #001219; /* deep teal */
+      --text: #e6eef8;
+      --muted: #9fb0d9;
+      --muted-2: #89a3d9;
+      --card: rgba(255,255,255,0.07);
+      --glass: rgba(255,255,255,0.06);
+      --border: rgba(80,200,120,0.4);
+      --ok: #22c55e; /* green-500 */
+      --warn: #fbbf24; /* amber-400 */
+      --err: #ef4444; /* red-500 */
+      --accent: #1f6feb;
+      --accent-hover: #1552b5;
+      --shadow: rgba(2,6,23,0.6);
     }
-    .card{
-      background:rgba(255,255,255,0.05);
-      padding:28px;
-      border-radius:16px;
-      box-shadow:0 10px 30px rgba(2,6,23,0.6);
-      max-width:480px;
-      width:100%;
-      text-align:center;
-    }
-    h1{margin:0 0 8px;font-size:22px;line-height:1.3}
-    p.subtitle{margin:0 0 18px;color:#9fb0d9;font-size:14px}
-    .big{font-size:42px;font-weight:700;letter-spacing:1px}
-    .label{margin-top:10px;color:#bcd0f5;font-size:14px;word-break:break-word}
-    .meta{margin-top:16px;color:#89a3d9;font-size:13px;text-align:left}
-    .small{font-size:14px;color:#9fb0d9}
-    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
-    button{
-      background:#1f6feb;
-      border:0;
-      padding:10px 14px;
-      border-radius:10px;
-      color:white;
-      cursor:pointer;
-      transition:background .2s;
-      font-size:14px;
-    }
-    button:hover{background:#1552b5}
-    footer{margin-top:16px;font-size:12px;color:#7f9bd6;text-align:center}
-
-    @media(max-width:480px){
-      .big{font-size:32px}
-      h1{font-size:18px}
-      .card{padding:20px}
+    /* Light mode */
+    .light {
+      --bg-1: #f6f8fa;
+      --bg-2: #e8eef6;
+      --text: #0b1220;
+      --muted: #4a5d80;
+      --muted-2: #3b557f;
+      --card: rgba(255,255,255,0.9);
+      --glass: rgba(255,255,255,0.85);
+      --border: rgba(31,111,235,0.35);
+      --shadow: rgba(15,23,42,0.15);
     }
 
-    /* Floating timer styles */
-    #floatingTimer {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(15, 23, 42, 0.9);
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 12px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-      font-size: 18px;
-      font-weight: 600;
-      cursor: move;
-      z-index: 9999;
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .wrap { width: 100%; max-width: 720px; }
+
+    .card {
+      background: var(--glass);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      padding: 28px;
+      border-radius: 18px;
+      box-shadow: 0 12px 36px var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    h1 { margin: 0; font-size: 22px; line-height: 1.3; }
+    p.subtitle { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+    .status { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .badge {
+      font-size: 12px; font-weight: 700; letter-spacing: .3px; padding: 6px 10px; border-radius: 999px;
+      display:inline-flex; align-items:center; gap:6px; text-transform: uppercase;
+    }
+    .badge.open { background: rgba(34,197,94,.15); color: #86efac; border: 1px solid rgba(34,197,94,.35); }
+    .badge.break { background: rgba(251,191,36,.15); color: #fde68a; border: 1px solid rgba(251,191,36,.35); }
+    .badge.closed { background: rgba(239,68,68,.15); color: #fecaca; border: 1px solid rgba(239,68,68,.35); }
+
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; align-items:center; }
+    .big { font-size: 42px; font-weight: 800; letter-spacing: 1px; text-align:center; }
+    .label { margin-top: 8px; color: var(--muted); font-size: 14px; text-align:center; word-break: break-word; }
+
+    /* Progress Ring */
+    .ring {
+      width: 180px; height: 180px; margin: 0 auto; position: relative;
+    }
+    .ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .ring .center { position:absolute; inset:0; display:grid; place-items:center; }
+    .ring .center .time { font-size: 22px; font-weight: 800; }
+    .ring .center .hint { font-size: 12px; color: var(--muted); }
+
+    .row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top: 16px; }
+    button, .segmented button {
+      background: var(--accent); border: 0; padding: 10px 14px; border-radius: 10px; color: white;
+      cursor: pointer; transition: background .2s, opacity .2s; font-size: 14px;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.ghost { background: transparent; border:1px solid var(--border); color: var(--text); }
+
+    .meta { margin-top: 16px; color: var(--muted-2); font-size: 13px; }
+
+    table.schedule { width:100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    .schedule th, .schedule td { text-align:left; padding: 8px 10px; border-bottom: 1px dashed rgba(255,255,255,0.12); }
+    .light .schedule th, .light .schedule td { border-bottom: 1px dashed rgba(15,23,42,0.15); }
+
+    .controls { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+    .segmented { display:flex; background: rgba(255,255,255,0.06); padding:4px; border-radius: 12px; border: 1px solid var(--border); }
+    .segmented button { background: transparent; color: var(--text); padding: 8px 10px; border-radius: 8px; }
+    .segmented button.active { background: var(--accent); }
+
+    footer { margin-top: 16px; font-size: 12px; color: var(--muted); text-align: center; }
+
+    /* Floating timer */
+    #floatingTimer { position: fixed; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.9); color: #fff;
+      padding: 10px 14px; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); font-size: 16px; font-weight: 700;
+      z-index: 9999; user-select: none; cursor: move; }
+    #floatingTimer.min { padding: 6px 10px; font-weight: 700; font-size: 14px; border-radius: 999px; }
+
+    /* Today timeline */
+    .timeline { position: relative; height: 10px; background: rgba(255,255,255,0.12); border-radius: 999px; margin-top: 12px; }
+    .timeline .segment { position:absolute; top:0; bottom:0; border-radius:999px; }
+    .timeline .open { background: rgba(34,197,94,.6); }
+    .timeline .break { background: rgba(251,191,36,.7); }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .ring { width: 160px; height: 160px; }
+      .big { font-size: 36px; }
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>CME Bitcoin Futures — Next Transition</h1>
-    <p class="subtitle">All times shown in <strong>Europe/Dublin</strong></p>
+  <div class="wrap">
+    <div class="card" role="region" aria-label="CME Bitcoin Futures Countdown">
+      <header>
+        <div>
+          <h1>CME Bitcoin Futures — Next Transition</h1>
+          <p class="subtitle">Times shown in <strong id="tzLabel">Dublin local time</strong></p>
+        </div>
+        <div class="controls">
+          <div class="segmented" role="tablist" aria-label="Timezone">
+            <button id="tz-dub" class="active" role="tab" aria-selected="true" title="Europe/Dublin">Dublin</button>
+            <button id="tz-ny" role="tab" aria-selected="false" title="America/New_York">New York</button>
+            <button id="tz-utc" role="tab" aria-selected="false" title="UTC">UTC</button>
+          </div>
+          <button id="theme" class="ghost" title="Toggle light/dark">🌓 Theme</button>
+        </div>
+      </header>
 
-    <div id="event" class="small">Calculating...</div>
-    <div id="countdown" class="big">--:--:--</div>
-    <div id="targetLocal" class="label"></div>
+      <div class="status" style="margin-top:14px;">
+        <span id="statusBadge" class="badge open" aria-live="polite">🟢 OPEN</span>
+        <span id="nextLabel" class="label" style="margin:0;">Calculating next transition…</span>
+      </div>
 
-    <div class="row">
-      <button id="refresh">Refresh</button>
-      <button id="copy">Copy Dublin Time</button>
+      <div class="grid">
+        <div>
+          <div class="ring" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" stroke="rgba(255,255,255,0.12)" stroke-width="8" fill="none" />
+              <circle id="progress" cx="60" cy="60" r="54" stroke="currentColor" stroke-width="8" stroke-linecap="round" fill="none" stroke-dasharray="339.292" stroke-dashoffset="339.292" />
+            </svg>
+            <div class="center">
+              <div class="time" id="countdown">--:--:--</div>
+              <div class="hint">until next transition</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="big" id="bigTime">--:--</div>
+          <div class="label" id="targetLocal">Next transition: —</div>
+          <div class="row" style="margin-top:14px;">
+            <button id="refresh" title="Refresh now">Refresh</button>
+            <button id="copy" class="ghost" title="Copy target time">Copy Time</button>
+            <button id="notify" class="ghost" title="Desktop notification at transition">🔔 Notify</button>
+          </div>
+          <div class="timeline" id="timeline" aria-label="Today trading timeline"></div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <strong>Schedule (CME Globex):</strong>
+        <table class="schedule" aria-label="CME schedule in ET vs Selected TZ">
+          <thead>
+            <tr><th>Event</th><th>ET (New York)</th><th id="tzCol">Dublin</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Open (Sunday)</td><td id="etOpen">—</td><td id="locOpen">—</td></tr>
+            <tr><td>Daily Break</td><td id="etBreak">—</td><td id="locBreak">—</td></tr>
+            <tr><td>Close (Friday)</td><td id="etClose">—</td><td id="locClose">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer>Uses IANA time zones (Luxon) — independent of OS settings.</footer>
     </div>
-
-    <div class="meta">
-      <strong>CME schedule used:</strong>
-      <ul style="margin:8px 0 0;padding-left:18px;line-height:1.4">
-        <li>Open: Sunday 18:00 ET</li>
-        <li>Close: Friday 17:00 ET</li>
-        <li>Daily break: 17:00–18:00 ET (daily)</li>
-      </ul>
-    </div>
-    <footer>Uses IANA time zones — not reliant on your OS timezone setting.</footer>
   </div>
 
   <!-- Floating Timer -->
-  <div id="floatingTimer">⏳ --:--:--</div>
+  <div id="floatingTimer" title="Drag to move • Double‑click to toggle mini mode">⏳ --:--:--</div>
 
   <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
   <script>
-    const { DateTime } = luxon;
-    const NY = 'America/New_York';
-    const DUB = 'Europe/Dublin';
+    const { DateTime, Duration } = luxon;
+    const ZONES = { DUB: 'Europe/Dublin', NY: 'America/New_York', UTC: 'UTC' };
+    let displayZone = ZONES.DUB;
 
-    function getNextTransition(nowNy){
-      const dailyClose = nowNy.set({hour:17,minute:0,second:0,millisecond:0});
-      const today18 = nowNy.set({hour:18,minute:0,second:0,millisecond:0});
+    // ---- Persistence ----
+    const store = {
+      get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+      set(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+    };
 
-      let fridayClose = nowNy.set({weekday:5,hour:17,minute:0,second:0,millisecond:0});
-      if(fridayClose <= nowNy) fridayClose = fridayClose.plus({days:7});
+    // Load prefs
+    displayZone = store.get('cme.tz', ZONES.DUB);
+    if (store.get('cme.theme', 'dark') === 'light') document.body.classList.add('light');
 
-      let sundayOpen = nowNy.set({weekday:7,hour:18,minute:0,second:0,millisecond:0});
-      if(sundayOpen <= nowNy) sundayOpen = sundayOpen.plus({days:7});
+    // ---- Elements ----
+    const el = {
+      countdown: document.getElementById('countdown'),
+      bigTime: document.getElementById('bigTime'),
+      statusBadge: document.getElementById('statusBadge'),
+      nextLabel: document.getElementById('nextLabel'),
+      targetLocal: document.getElementById('targetLocal'),
+      floating: document.getElementById('floatingTimer'),
+      progress: document.getElementById('progress'),
+      tzLabel: document.getElementById('tzLabel'),
+      tzCol: document.getElementById('tzCol'),
+      etOpen: document.getElementById('etOpen'),
+      etBreak: document.getElementById('etBreak'),
+      etClose: document.getElementById('etClose'),
+      locOpen: document.getElementById('locOpen'),
+      locBreak: document.getElementById('locBreak'),
+      locClose: document.getElementById('locClose'),
+      timeline: document.getElementById('timeline')
+    };
 
-      const lastFridayClose = fridayClose.minus({days:7});
-      const nextSundayOpen = sundayOpen;
+    const btn = {
+      refresh: document.getElementById('refresh'),
+      copy: document.getElementById('copy'),
+      notify: document.getElementById('notify'),
+      tzDub: document.getElementById('tz-dub'),
+      tzNy: document.getElementById('tz-ny'),
+      tzUtc: document.getElementById('tz-utc'),
+      theme: document.getElementById('theme'),
+    };
 
-      if(nowNy >= lastFridayClose && nowNy < nextSundayOpen){
-        return { state: 'CLOSED (weekend)', targetNy: nextSundayOpen };
+    // ---- CME Logic ----
+    const NY = ZONES.NY;
+
+    function getScheduleBase(refNy) {
+      const startOfWeek = refNy.startOf('week');
+      const sundayOpenNy = startOfWeek.set({ weekday: 7, hour: 18, minute: 0, second: 0, millisecond: 0 });
+      const fridayCloseNy = startOfWeek.set({ weekday: 5, hour: 17, minute: 0, second: 0, millisecond: 0 });
+      const dailyBreakStartNy = refNy.set({ hour: 17, minute: 0, second: 0, millisecond: 0 });
+      const dailyBreakEndNy = refNy.set({ hour: 18, minute: 0, second: 0, millisecond: 0 });
+      return { sundayOpenNy, fridayCloseNy, dailyBreakStartNy, dailyBreakEndNy };
+    }
+
+    function getNextTransition(nowNy) {
+      const dailyClose = nowNy.set({ hour: 17, minute: 0, second: 0, millisecond: 0 }); // 17:00 ET
+      const today18 = nowNy.set({ hour: 18, minute: 0, second: 0, millisecond: 0 });    // 18:00 ET
+
+      let fridayClose = nowNy.set({ weekday: 5, hour: 17, minute: 0, second: 0, millisecond: 0 });
+      if (fridayClose <= nowNy) fridayClose = fridayClose.plus({ days: 7 });
+
+      let sundayOpen = nowNy.set({ weekday: 7, hour: 18, minute: 0, second: 0, millisecond: 0 });
+      if (sundayOpen <= nowNy) sundayOpen = sundayOpen.plus({ days: 7 });
+
+      const weekendStart = nowNy.set({ weekday: 5, hour: 17, minute: 0, second: 0, millisecond: 0 });
+      const weekendEnd = sundayOpen; // Sun 18:00
+
+      // Weekend closed
+      if (nowNy >= weekendStart && nowNy < weekendEnd) {
+        return { state: 'CLOSED (weekend)', targetNy: weekendEnd, prevStartNy: weekendStart };
       }
 
-      if(nowNy >= dailyClose && nowNy < today18){
-        return { state: 'DAILY BREAK', targetNy: today18 };
+      // Daily break
+      if (nowNy >= dailyClose && nowNy < today18) {
+        return { state: 'DAILY BREAK', targetNy: today18, prevStartNy: dailyClose };
       }
 
-      if(nowNy < dailyClose){
-        return { state: 'OPEN', targetNy: dailyClose };
+      // Normal trading hours (OPEN)
+      if (nowNy < dailyClose) {
+        // OPEN from previous day 18:00 to today 17:00
+        const prevOpenStart = dailyClose.minus({ days: 1 }).set({ hour: 18 });
+        return { state: 'OPEN', targetNy: dailyClose, prevStartNy: prevOpenStart };
       } else {
-        let next17 = dailyClose.plus({days:1});
-        return { state: 'OPEN', targetNy: next17 };
+        // After 18:00, technically OPEN again until next 17:00
+        const nextDailyClose = dailyClose.plus({ days: 1 });
+        return { state: 'OPEN', targetNy: nextDailyClose, prevStartNy: today18 };
       }
     }
 
-    function update(){
-      const nowNy = DateTime.now().setZone(NY);
-      const nowDub = nowNy.setZone(DUB);
-      const { state, targetNy } = getNextTransition(nowNy);
-      const targetDub = targetNy.setZone(DUB);
-
-      const diff = targetDub.diff(nowDub, ['days','hours','minutes','seconds']).toObject();
-
-      const days = Math.floor(diff.days||0);
-      const hours = Math.floor(diff.hours||0);
-      const minutes = Math.floor(diff.minutes||0);
-      const seconds = Math.floor(diff.seconds||0);
-
-      const countdownText = (days>0? (days+'d '):'') + 
-        `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
-
-      document.getElementById('event').innerHTML = `Market status: <strong>${state}</strong>`;
-      document.getElementById('countdown').textContent = countdownText;
-      document.getElementById('targetLocal').textContent = `Target time (Dublin): ${targetDub.toLocaleString(DateTime.DATETIME_FULL)} (${DUB})`;
-
-      // update floating timer too
-      document.getElementById('floatingTimer').textContent = "⏳ " + countdownText;
-
-      document.querySelector('.card').style.border = state.includes('CLOSED') ? '1px solid rgba(255,80,80,0.2)' : '1px solid rgba(80,200,120,0.2)';
+    function fmt(dt, zone = displayZone, style = DateTime.DATETIME_FULL) {
+      return dt.setZone(zone).toLocaleString(style);
     }
 
-    document.getElementById('refresh').addEventListener('click', update);
-    document.getElementById('copy').addEventListener('click', ()=>{
-      const txt = document.getElementById('targetLocal').textContent;
-      navigator.clipboard?.writeText(txt).then(()=>{
-        alert('Dublin target time copied to clipboard');
-      }).catch(()=>{
+    function fmtHm(dt, zone = displayZone) { return dt.setZone(zone).toFormat('HH:mm'); }
+
+    function updateScheduleTable() {
+      const refNy = DateTime.now().setZone(NY);
+      const { sundayOpenNy, fridayCloseNy } = getScheduleBase(refNy);
+
+      el.etOpen.textContent = sundayOpenNy.toFormat('ccc HH:mm');
+      el.etBreak.textContent = '17:00–18:00';
+      el.etClose.textContent = fridayCloseNy.toFormat('ccc HH:mm');
+
+      el.locOpen.textContent = sundayOpenNy.setZone(displayZone).toFormat('ccc HH:mm');
+      el.locBreak.textContent = `${refNy.set({ hour:17 }).setZone(displayZone).toFormat('HH:mm')}–${refNy.set({ hour:18 }).setZone(displayZone).toFormat('HH:mm')}`;
+      el.locClose.textContent = fridayCloseNy.setZone(displayZone).toFormat('ccc HH:mm');
+
+      el.tzCol.textContent = zoneLabel(displayZone);
+    }
+
+    function zoneLabel(zone) {
+      if (zone === ZONES.DUB) return 'Dublin';
+      if (zone === ZONES.NY) return 'Selected TZ';
+      if (zone === ZONES.UTC) return 'UTC';
+      return zone;
+    }
+
+    function updateTimeline(nowNy) {
+      // 24h day view in selected displayZone, mark 17-18 ET break
+      const start = nowNy.setZone(displayZone).startOf('day');
+      const end = start.plus({ hours: 24 });
+
+      // Compute break start/end in display zone
+      const breakStartNy = nowNy.set({ hour:17, minute:0, second:0, millisecond:0 });
+      const breakEndNy   = nowNy.set({ hour:18, minute:0, second:0, millisecond:0 });
+      const bs = breakStartNy.setZone(displayZone);
+      const be = breakEndNy.setZone(displayZone);
+
+      const totalMs = end - start;
+      const open1Start = start;      // from 00:00 local to bs (if within today)
+      const open1End = bs;
+      const open2Start = be;
+      const open2End = end;
+
+      el.timeline.innerHTML = '';
+      function seg(x0, x1, cls) {
+        const left = Math.max(0, (x0 - start) / totalMs * 100);
+        const right = Math.max(0, 100 - (x1 - start) / totalMs * 100);
+        const width = 100 - left - right;
+        if (width <= 0) return;
+        const s = document.createElement('div');
+        s.className = `segment ${cls}`;
+        s.style.left = left + '%'; s.style.width = width + '%';
+        el.timeline.appendChild(s);
+      }
+      seg(open1Start, open1End, 'open');
+      seg(bs, be, 'break');
+      seg(open2Start, open2End, 'open');
+    }
+
+    function setBadge(state) {
+      const b = el.statusBadge;
+      b.classList.remove('open','break','closed');
+      if (state.includes('CLOSED')) { b.classList.add('closed'); b.textContent = '🔴 CLOSED (Weekend)'; }
+      else if (state.includes('BREAK')) { b.classList.add('break'); b.textContent = '🟡 DAILY BREAK'; }
+      else { b.classList.add('open'); b.textContent = '🟢 OPEN'; }
+    }
+
+    function updateUI() {
+      const nowNy = DateTime.now().setZone(NY);
+      const nowLoc = nowNy.setZone(displayZone);
+      const { state, targetNy, prevStartNy } = getNextTransition(nowNy);
+      const targetLoc = targetNy.setZone(displayZone);
+
+      // Countdown
+      let diff = targetLoc.diff(nowLoc, ['days','hours','minutes','seconds']).toObject();
+      if ((diff.seconds ?? 0) < 0) diff = { days:0,hours:0,minutes:0,seconds:0 };
+      const days = Math.floor(diff.days || 0);
+      const hours = Math.floor(diff.hours || 0);
+      const minutes = Math.floor(diff.minutes || 0);
+      const seconds = Math.floor(diff.seconds || 0);
+      const hh = String(hours).padStart(2,'0');
+      const mm = String(minutes).padStart(2,'0');
+      const ss = String(seconds).padStart(2,'0');
+      const countdownText = (days>0? days + 'd ' : '') + `${hh}:${mm}:${ss}`;
+
+      el.countdown.textContent = countdownText;
+      el.bigTime.textContent = targetLoc.toFormat('ccc HH:mm');
+      el.targetLocal.textContent = `Next transition (${zoneLabel(displayZone)}): ${targetLoc.toLocaleString(DateTime.DATETIME_FULL)}`;
+      el.floating.textContent = '⏳ ' + countdownText;
+
+      // Progress ring (0..1 over the current interval)
+      const total = targetNy.diff(prevStartNy).as('seconds');
+      const passed = nowNy.diff(prevStartNy).as('seconds');
+      const pct = Math.min(1, Math.max(0, passed / total));
+      const circumference = 2 * Math.PI * 54; // r=54
+      const offset = circumference * (1 - pct);
+      el.progress.style.stroke = state.includes('CLOSED') ? 'var(--err)' : state.includes('BREAK') ? 'var(--warn)' : 'var(--ok)';
+      el.progress.style.strokeDashoffset = String(offset);
+
+      setBadge(state);
+
+      // Next label
+      const nextLabel = state.includes('CLOSED') ? 'Reopens at' : state.includes('BREAK') ? 'Reopens at' : 'Closes (break) at';
+      el.nextLabel.textContent = `${nextLabel} ${targetLoc.toFormat('ccc HH:mm')} (${zoneLabel(displayZone)})`;
+
+      // Timeline for today in chosen zone
+      updateTimeline(nowNy);
+    }
+
+    function showSchedule() { updateScheduleTable(); }
+
+    // ---- Buttons ----
+    btn.refresh.addEventListener('click', updateUI);
+    btn.copy.addEventListener('click', () => {
+      const txt = el.targetLocal.textContent;
+      (navigator.clipboard?.writeText(txt) || Promise.reject()).then(() => {
+        toast('Time copied to clipboard');
+      }).catch(() => {
         prompt('Copy this time', txt);
       });
     });
 
-    update();
-    setInterval(update, 1000);
+    // Notifications
+    let notifyEnabled = store.get('cme.notify', false);
+    function ensurePermission() {
+      if (!('Notification' in window)) return Promise.reject('Notifications not supported');
+      if (Notification.permission === 'granted') return Promise.resolve('granted');
+      if (Notification.permission !== 'denied') return Notification.requestPermission();
+      return Promise.reject('denied');
+    }
 
-    // make floating timer draggable
-    const float = document.getElementById("floatingTimer");
-    let offsetX, offsetY, dragging = false;
+    function scheduleTickNotify() {
+      if (!notifyEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+      // We check every second in the main loop; when remaining hits 0, fire.
+    }
 
-    float.addEventListener("mousedown", e => {
-      dragging = true;
-      offsetX = e.clientX - float.offsetLeft;
-      offsetY = e.clientY - float.offsetTop;
+    btn.notify.addEventListener('click', async () => {
+      try {
+        const p = await ensurePermission();
+        if (p !== 'granted') throw new Error('Permission not granted');
+        notifyEnabled = !notifyEnabled;
+        store.set('cme.notify', notifyEnabled);
+        toast(notifyEnabled ? 'Notifications enabled' : 'Notifications disabled');
+        btn.notify.classList.toggle('active', notifyEnabled);
+      } catch (e) {
+        toast('Notifications unavailable');
+      }
     });
 
-    document.addEventListener("mousemove", e => {
-      if (!dragging) return;
-      float.style.left = (e.clientX - offsetX) + "px";
-      float.style.top = (e.clientY - offsetY) + "px";
-      float.style.right = "auto";
-      float.style.bottom = "auto";
+    // Theme
+    btn.theme.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      store.set('cme.theme', document.body.classList.contains('light') ? 'light' : 'dark');
     });
 
-    document.addEventListener("mouseup", () => dragging = false);
+    // Timezone segmented control
+    function setZone(zone) {
+      displayZone = zone; store.set('cme.tz', zone);
+      el.tzLabel.textContent = `Times shown in ${zone === ZONES.DUB ? 'Dublin local time' : zone === ZONES.NY ? 'New York time' : 'UTC'}`;
+      for (const b of [btn.tzDub, btn.tzNy, btn.tzUtc]) b.classList.remove('active');
+      if (zone === ZONES.DUB) btn.tzDub.classList.add('active');
+      else if (zone === ZONES.NY) btn.tzNy.classList.add('active');
+      else btn.tzUtc.classList.add('active');
+      showSchedule();
+      updateUI();
+    }
+    btn.tzDub.addEventListener('click', () => setZone(ZONES.DUB));
+    btn.tzNy.addEventListener('click', () => setZone(ZONES.NY));
+    btn.tzUtc.addEventListener('click', () => setZone(ZONES.UTC));
+
+    // ---- Init ----
+    showSchedule();
+    setZone(displayZone);
+    updateUI();
+
+    // Tick loop
+    let lastSecond = -1;
+    setInterval(() => {
+      const now = Date.now();
+      const s = Math.floor(now / 1000);
+      if (s !== lastSecond) {
+        const prevBadge = el.statusBadge.textContent;
+        updateUI();
+        // Notify at transition boundary
+        if (notifyEnabled && 'Notification' in window && Notification.permission === 'granted') {
+          // Heuristic: if countdown just rolled to 0
+          if (document.getElementById('countdown').textContent.endsWith('00:00') || document.getElementById('countdown').textContent.endsWith(' 0d 00:00:00')) {
+            new Notification('CME Transition', { body: el.nextLabel.textContent.replace(/^Reopens at |^Closes \(break\) at /, 'Now: '), silent: true });
+          }
+        }
+        lastSecond = s;
+      }
+    }, 250);
+
+    // ---- Draggable floating timer + mini mode ----
+    const float = el.floating; let offsetX = 0, offsetY = 0, dragging = false;
+    float.addEventListener('mousedown', e => { dragging = true; offsetX = e.clientX - float.offsetLeft; offsetY = e.clientY - float.offsetTop; });
+    document.addEventListener('mousemove', e => { if (!dragging) return; float.style.left = (e.clientX - offsetX) + 'px'; float.style.top = (e.clientY - offsetY) + 'px'; float.style.right = 'auto'; float.style.bottom = 'auto'; });
+    document.addEventListener('mouseup', () => dragging = false);
+    float.addEventListener('dblclick', () => { float.classList.toggle('min'); });
+
+    // ---- Tiny toast ----
+    let toastEl;
+    function toast(msg) {
+      if (!toastEl) {
+        toastEl = document.createElement('div');
+        Object.assign(toastEl.style, { position:'fixed', bottom:'20px', left:'50%', transform:'translateX(-50%)', background:'rgba(0,0,0,0.8)', color:'#fff', padding:'10px 14px', borderRadius:'10px', zIndex:10000, boxShadow:'0 6px 16px rgba(0,0,0,.4)', fontSize:'14px' });
+        document.body.appendChild(toastEl);
+      }
+      toastEl.textContent = msg;
+      toastEl.style.opacity = '1';
+      setTimeout(() => { toastEl.style.transition = 'opacity .6s'; toastEl.style.opacity = '0'; }, 1200);
+    }
   </script>
 </body>
 </html>
