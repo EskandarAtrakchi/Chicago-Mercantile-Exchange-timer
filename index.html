@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CME Bitcoin Futures — Countdown</title>
-  <meta name="description" content="Next CME Bitcoin Futures transition with Dublin/NY time, progress ring, notifications, and floating mini timer." />
+  <meta name="description" content="Next CME Bitcoin Futures transition with Dublin/NY time, progress ring, notifications." />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrC83h3hTxI-eUXaT0e7Tn0jeK-PJUKX4HEhlLvYNC3ZEq3oiSKRCdY0RN8ta3GjfIY-k&usqp=CAU" type="image/png">
   <style>
@@ -109,12 +109,6 @@
 
     footer { margin-top: 16px; font-size: 12px; color: var(--muted); text-align: center; }
 
-    /* Floating timer */
-    #floatingTimer { position: fixed; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.9); color: #fff;
-      padding: 10px 14px; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); font-size: 16px; font-weight: 700;
-      z-index: 9999; user-select: none; cursor: move; }
-    #floatingTimer.min { padding: 6px 10px; font-weight: 700; font-size: 14px; border-radius: 999px; }
-
     /* Today timeline */
     .timeline { position: relative; height: 10px; background: rgba(255,255,255,0.12); border-radius: 999px; margin-top: 12px; }
     .timeline .segment { position:absolute; top:0; bottom:0; border-radius:999px; }
@@ -194,9 +188,6 @@
     </div>
   </div>
 
-  <!-- Floating Timer -->
-  <div id="floatingTimer" title="Drag to move • Double‑click to toggle mini mode">⏳ --:--:--</div>
-
   <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
   <script>
     const { DateTime, Duration } = luxon;
@@ -220,7 +211,6 @@
       statusBadge: document.getElementById('statusBadge'),
       nextLabel: document.getElementById('nextLabel'),
       targetLocal: document.getElementById('targetLocal'),
-      floating: document.getElementById('floatingTimer'),
       progress: document.getElementById('progress'),
       tzLabel: document.getElementById('tzLabel'),
       tzCol: document.getElementById('tzCol'),
@@ -380,7 +370,6 @@
       el.countdown.textContent = countdownText;
       el.bigTime.textContent = targetLoc.toFormat('ccc HH:mm');
       el.targetLocal.textContent = `Next transition (${zoneLabel(displayZone)}): ${targetLoc.toLocaleString(DateTime.DATETIME_FULL)}`;
-      el.floating.textContent = '⏳ ' + countdownText;
 
       // Progress ring (0..1 over the current interval)
       const total = targetNy.diff(prevStartNy).as('seconds');
@@ -485,13 +474,6 @@
         lastSecond = s;
       }
     }, 250);
-
-    // ---- Draggable floating timer + mini mode ----
-    const float = el.floating; let offsetX = 0, offsetY = 0, dragging = false;
-    float.addEventListener('mousedown', e => { dragging = true; offsetX = e.clientX - float.offsetLeft; offsetY = e.clientY - float.offsetTop; });
-    document.addEventListener('mousemove', e => { if (!dragging) return; float.style.left = (e.clientX - offsetX) + 'px'; float.style.top = (e.clientY - offsetY) + 'px'; float.style.right = 'auto'; float.style.bottom = 'auto'; });
-    document.addEventListener('mouseup', () => dragging = false);
-    float.addEventListener('dblclick', () => { float.classList.toggle('min'); });
 
     // ---- Tiny toast ----
     let toastEl;
