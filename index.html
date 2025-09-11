@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CME Bitcoin Futures — Countdown</title>
-  <meta name="description" content="Next CME Bitcoin Futures transition with Dublin/NY time, progress ring, notifications." />
+  <meta name="description" content="Next CME Bitcoin Futures transition with Dublin/NY/Tokyo time, progress ring, notifications." />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrC83h3hTxI-eUXaT0e7Tn0jeK-PJUKX4HEhlLvYNC3ZEq3oiSKRCdY0RN8ta3GjfIY-k&usqp=CAU" type="image/png">
   <style>
@@ -134,6 +134,7 @@
           <div class="segmented" role="tablist" aria-label="Timezone">
             <button id="tz-dub" class="active" role="tab" aria-selected="true" title="Europe/Dublin">Dublin</button>
             <button id="tz-ny" role="tab" aria-selected="false" title="America/New_York">New York</button>
+            <button id="tz-tokyo" role="tab" aria-selected="false" title="Asia/Tokyo">Tokyo</button>
             <button id="tz-utc" role="tab" aria-selected="false" title="UTC">UTC</button>
           </div>
           <button id="theme" class="ghost" title="Toggle light/dark">🌓 Theme</button>
@@ -191,7 +192,7 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
   <script>
     const { DateTime, Duration } = luxon;
-    const ZONES = { DUB: 'Europe/Dublin', NY: 'America/New_York', UTC: 'UTC' };
+    const ZONES = { DUB: 'Europe/Dublin', NY: 'America/New_York', TOKYO: 'Asia/Tokyo', UTC: 'UTC' };
     let displayZone = ZONES.DUB;
 
     // ---- Persistence ----
@@ -229,6 +230,7 @@
       notify: document.getElementById('notify'),
       tzDub: document.getElementById('tz-dub'),
       tzNy: document.getElementById('tz-ny'),
+      tzTokyo: document.getElementById('tz-tokyo'),
       tzUtc: document.getElementById('tz-utc'),
       theme: document.getElementById('theme'),
     };
@@ -247,7 +249,7 @@
 
     function getNextTransition(nowNy) {
       const dailyClose = nowNy.set({ hour: 17, minute: 0, second: 0, millisecond: 0 }); // 17:00 ET
-      const today18 = nowNy.set({ hour: 18, minute: 0, second: 0, millisecond: 0 });    // 18:00 ET
+      const today18 = nowNy.set({ hour: 18, minute: 0, second: 0, millisecond: 0 });    // 18:00 ET
 
       let fridayClose = nowNy.set({ weekday: 5, hour: 17, minute: 0, second: 0, millisecond: 0 });
       if (fridayClose <= nowNy) fridayClose = fridayClose.plus({ days: 7 });
@@ -303,7 +305,8 @@
 
     function zoneLabel(zone) {
       if (zone === ZONES.DUB) return 'Dublin';
-      if (zone === ZONES.NY) return 'Selected TZ';
+      if (zone === ZONES.NY) return 'New York';
+      if (zone === ZONES.TOKYO) return 'Tokyo';
       if (zone === ZONES.UTC) return 'UTC';
       return zone;
     }
@@ -320,7 +323,7 @@
       const be = breakEndNy.setZone(displayZone);
 
       const totalMs = end - start;
-      const open1Start = start;      // from 00:00 local to bs (if within today)
+      const open1Start = start;       // from 00:00 local to bs (if within today)
       const open1End = bs;
       const open2Start = be;
       const open2End = end;
@@ -439,16 +442,18 @@
     // Timezone segmented control
     function setZone(zone) {
       displayZone = zone; store.set('cme.tz', zone);
-      el.tzLabel.textContent = `Times shown in ${zone === ZONES.DUB ? 'Dublin local time' : zone === ZONES.NY ? 'New York time' : 'UTC'}`;
-      for (const b of [btn.tzDub, btn.tzNy, btn.tzUtc]) b.classList.remove('active');
+      el.tzLabel.textContent = `Times shown in ${zone === ZONES.DUB ? 'Dublin local time' : zone === ZONES.NY ? 'New York time' : zone === ZONES.TOKYO ? 'Tokyo time' : 'UTC'}`;
+      for (const b of [btn.tzDub, btn.tzNy, btn.tzTokyo, btn.tzUtc]) b.classList.remove('active');
       if (zone === ZONES.DUB) btn.tzDub.classList.add('active');
       else if (zone === ZONES.NY) btn.tzNy.classList.add('active');
+      else if (zone === ZONES.TOKYO) btn.tzTokyo.classList.add('active');
       else btn.tzUtc.classList.add('active');
       showSchedule();
       updateUI();
     }
     btn.tzDub.addEventListener('click', () => setZone(ZONES.DUB));
     btn.tzNy.addEventListener('click', () => setZone(ZONES.NY));
+    btn.tzTokyo.addEventListener('click', () => setZone(ZONES.TOKYO));
     btn.tzUtc.addEventListener('click', () => setZone(ZONES.UTC));
 
     // ---- Init ----
