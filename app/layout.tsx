@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: 'CME Bitcoin Futures — Live Session Tracker',
   description:
     'Live countdown to the next CME Bitcoin Futures session transition. Track open, daily break, and weekend close across Dublin, London, New York, Tokyo, and UTC.',
-  generator: 'v0.app',
 }
 
 export const viewport: Viewport = {
